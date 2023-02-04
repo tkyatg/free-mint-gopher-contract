@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -12,8 +13,12 @@ contract RandomGopher is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
+    uint256 price = 0.01 ether;
+    address payable treasury;
 
-    constructor() ERC721("RandomGopher", "RG") {}
+    constructor(address payable _treasury) ERC721("RandomGopher", "RG") {
+        treasury = _treasury;
+    }
 
     mapping(uint256 => uint256) public tokenImageTypes;
 
@@ -22,11 +27,13 @@ contract RandomGopher is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
             "https://gateway.pinata.cloud/ipfs/QmcKYEkNXnDpZGfLo3PvybJwbETpAcyRLTTLs1hki1DEGd/";
     }
 
-    function safeMint(address to) public onlyOwner {
+    function safeMint() public payable {
+        require(msg.value >= price);
+        treasury.transfer(msg.value);
         uint256 tokenId = _tokenIdCounter.current();
         tokenImageTypes[tokenId] = random() + 1;
         _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
+        _safeMint(msg.sender, tokenId);
     }
 
     function _burn(uint256 tokenId)
@@ -43,7 +50,6 @@ contract RandomGopher is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         returns (string memory)
     {
         super._requireMinted(tokenId);
-
         string memory tokenImage = Strings.toString(tokenImageTypes[tokenId]);
         string memory baseURI = _baseURI();
         return
